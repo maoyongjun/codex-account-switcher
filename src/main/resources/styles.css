@@ -1,0 +1,92 @@
+.app-root {
+    -fx-font-family: "Microsoft YaHei UI", "Segoe UI", sans-serif;
+    -fx-background-color: #f6f7f9;
+}
+
+.account-list {
+    -fx-background-color: #202734;
+    -fx-control-inner-background: #202734;
+    -fx-padding: 12;
+}
+
+.account-list .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #e9edf4;
+    -fx-padding: 3 4;
+}
+
+.account-list .list-cell:selected {
+    -fx-background-color: #2d7d9a;
+}
+
+.account-title {
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 15px;
+    -fx-font-weight: 700;
+}
+
+.account-subtitle {
+    -fx-text-fill: #c8d2df;
+    -fx-font-size: 12px;
+}
+
+.content {
+    -fx-background-color: #f6f7f9;
+}
+
+.title {
+    -fx-font-size: 26px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #1d2733;
+}
+
+.section-title {
+    -fx-font-size: 14px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #2f3a46;
+}
+
+.detail-grid {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #dbe1e8;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 18;
+}
+
+.field-label {
+    -fx-font-size: 13px;
+    -fx-text-fill: #657180;
+    -fx-min-width: 82px;
+}
+
+.value-label {
+    -fx-font-size: 13px;
+    -fx-text-fill: #1f2935;
+}
+
+.action-button {
+    -fx-background-color: #2d7d9a;
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+    -fx-background-radius: 6;
+    -fx-padding: 9 14;
+}
+
+.action-button:hover {
+    -fx-background-color: #24677f;
+}
+
+.action-button:disabled {
+    -fx-opacity: 0.55;
+}
+
+.log-area {
+    -fx-font-family: "Consolas", "Microsoft YaHei UI", monospace;
+    -fx-font-size: 12px;
+    -fx-control-inner-background: #ffffff;
+    -fx-border-color: #dbe1e8;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+}
