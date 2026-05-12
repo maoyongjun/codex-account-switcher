@@ -32,7 +32,11 @@ class AccountRepositoryTest {
         assertEquals("1", Files.readString(accountHome.resolve("account_slot.txt"), StandardCharsets.US_ASCII));
         assertTrue(Files.isDirectory(userHome.resolve(".codex-shared").resolve("sessions")));
         assertTrue(Files.isDirectory(userHome.resolve(".codex-shared").resolve("archived_sessions")));
+        assertTrue(Files.isDirectory(userHome.resolve(".codex-shared").resolve("sqlite")));
+        assertTrue(Files.exists(userHome.resolve(".codex-shared").resolve(".codex-global-state.json")));
         assertTrue(Files.exists(userHome.resolve(".codex-shared").resolve("session_index.jsonl")));
+        assertTrue(Files.exists(userHome.resolve(".codex-shared").resolve("logs_2.sqlite")));
+        assertTrue(Files.exists(userHome.resolve(".codex-shared").resolve("state_5.sqlite")));
     }
 
     @Test
@@ -65,6 +69,7 @@ class AccountRepositoryTest {
                 StandardCharsets.US_ASCII));
         assertTrue(Files.readString(userHome.resolve(".codex").resolve("config.toml"), StandardCharsets.UTF_8)
                 .contains("gpt-5.5"));
+        assertTrue(Files.exists(userHome.resolve(".codex").resolve("state_5.sqlite")));
     }
 
     private static AccountRepository repository(Path userHome) {

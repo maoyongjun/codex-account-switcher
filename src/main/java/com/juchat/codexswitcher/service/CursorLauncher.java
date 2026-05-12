@@ -2,6 +2,7 @@ package com.juchat.codexswitcher.service;
 
 import com.juchat.codexswitcher.model.LaunchResult;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -11,8 +12,13 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public final class CursorLauncher {
+    private static final Pattern SESSION_ID_PATTERN = Pattern.compile("\"id\"\\s*:\\s*\"([^\"]+)\"");
+    private static final Pattern SESSION_CWD_PATTERN = Pattern.compile("\"cwd\"\\s*:\\s*\"((?:\\\\.|[^\"])*)\"");
+
     private final AppPaths paths;
     private final ProcessManager processManager;
 
@@ -36,10 +42,11 @@ public final class CursorLauncher {
     public LaunchResult launchCodexApp(int slot, Path accountHome) throws IOException {
         processManager.stopCursorAndCodex();
         Path codex = findCodexPath();
+        Path workspace = resolveCodexWorkspace(accountHome);
         String executableName = codex.getFileName().toString();
         ProcessBuilder builder = executableName.equalsIgnoreCase("codex.exe") || executableName.equalsIgnoreCase("codex")
-                ? new ProcessBuilder(codex.toString(), "app")
-                : new ProcessBuilder(codex.toString());
+                ? new ProcessBuilder(codex.toString(), "app", workspace.toString())
+                : new ProcessBuilder(codex.toString(), workspace.toString());
         startWithAccountEnvironment(builder, slot, accountHome);
         return new LaunchResult(slot, accountHome, codex, "Codex");
     }
@@ -76,6 +83,26 @@ public final class CursorLauncher {
             }
         }
         throw new IOException("codex executable was not found.");
+    }
+
+    Path resolveCodexWorkspace(Path accountHome) {
+        String override = System.getProperty("codex.switcher.codexWorkspace");
+        if (override != null && !override.isBlank()) {
+            Path overridePath = Paths.get(override);
+            if (Files.isDirectory(overridePath)) {
+                return overridePath.toAbsolutePath().normalize();
+            }
+        }
+
+        try {
+            Path recentWorkspace = findRecentSessionWorkspace(accountHome);
+            if (recentWorkspace != null) {
+                return recentWorkspace;
+            }
+        } catch (IOException ignored) {
+            // Falling back to user home still lets Codex launch; the UI may show only projectless threads.
+        }
+        return paths.userHome();
     }
 
     private void startWithAccountEnvironment(ProcessBuilder builder, int slot, Path accountHome) throws IOException {
@@ -145,6 +172,60 @@ public final class CursorLauncher {
                 Arrays.stream(names).map(name -> Paths.get(entry, name)).forEach(candidates::add);
             }
         }
+    }
+
+    private Path findRecentSessionWorkspace(Path accountHome) throws IOException {
+        Path index = accountHome.resolve("session_index.jsonl");
+        Path sessions = accountHome.resolve("sessions");
+        if (!Files.exists(index) || !Files.isDirectory(sessions)) {
+            return null;
+        }
+
+        List<String> lines = Files.readAllLines(index);
+        for (int i = lines.size() - 1; i >= 0; i--) {
+            String sessionId = extract(SESSION_ID_PATTERN, lines.get(i));
+            if (sessionId == null) {
+                continue;
+            }
+            Path sessionFile = findSessionFile(sessions, sessionId);
+            if (sessionFile == null) {
+                continue;
+            }
+            Path cwd = readSessionCwd(sessionFile);
+            if (cwd != null && Files.isDirectory(cwd)) {
+                return cwd.toAbsolutePath().normalize();
+            }
+        }
+        return null;
+    }
+
+    private static Path findSessionFile(Path sessions, String sessionId) throws IOException {
+        try (var stream = Files.walk(sessions, 5)) {
+            return stream.filter(Files::isRegularFile)
+                    .filter(path -> path.getFileName().toString().contains(sessionId))
+                    .findFirst()
+                    .orElse(null);
+        }
+    }
+
+    private static Path readSessionCwd(Path sessionFile) throws IOException {
+        try (BufferedReader reader = Files.newBufferedReader(sessionFile)) {
+            String firstLine = reader.readLine();
+            String cwd = firstLine == null ? null : extract(SESSION_CWD_PATTERN, firstLine);
+            return cwd == null || cwd.isBlank() ? null : Paths.get(unescapeJson(cwd));
+        }
+    }
+
+    private static String extract(Pattern pattern, String input) {
+        if (input == null) {
+            return null;
+        }
+        Matcher matcher = pattern.matcher(input);
+        return matcher.find() ? matcher.group(1) : null;
+    }
+
+    private static String unescapeJson(String value) {
+        return value.replace("\\\\", "\\").replace("\\\"", "\"");
     }
 
     private static String getenvIgnoreCase(String key) {

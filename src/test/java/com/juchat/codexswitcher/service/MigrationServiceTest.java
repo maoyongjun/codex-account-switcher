@@ -28,6 +28,8 @@ class MigrationServiceTest {
                 TestTokens.authJson("export@example.com", 1893456000L), StandardCharsets.UTF_8);
         Files.writeString(userHome.resolve(".codex-shared").resolve("sessions").resolve("chat.jsonl"),
                 "shared-chat", StandardCharsets.UTF_8);
+        Files.writeString(userHome.resolve(".codex-shared").resolve("logs_2.sqlite"),
+                "shared-logs", StandardCharsets.UTF_8);
 
         Path zip = userHome.resolve("codex-export.zip");
         fixture.migration.exportAll(zip);
@@ -42,7 +44,9 @@ class MigrationServiceTest {
         try (ZipFile zipFile = new ZipFile(zip.toFile())) {
             assertNotNull(zipFile.getEntry("accounts/account1/auth.json"));
             assertNotNull(zipFile.getEntry("shared/sessions/chat.jsonl"));
+            assertNotNull(zipFile.getEntry("shared/logs_2.sqlite"));
             assertFalse(zipFile.stream().anyMatch(entry -> entry.getName().startsWith("accounts/account1/sessions/")));
+            assertFalse(zipFile.stream().anyMatch(entry -> entry.getName().equals("accounts/account1/logs_2.sqlite")));
         }
     }
 
@@ -54,6 +58,8 @@ class MigrationServiceTest {
                 TestTokens.authJson("restored@example.com", 1893456000L), StandardCharsets.UTF_8);
         Files.writeString(userHome.resolve(".codex-shared").resolve("session_index.jsonl"),
                 "restored-index", StandardCharsets.UTF_8);
+        Files.writeString(userHome.resolve(".codex-shared").resolve("state_5.sqlite"),
+                "restored-state", StandardCharsets.UTF_8);
         Path zip = userHome.resolve("codex-export.zip");
         fixture.migration.exportAll(zip);
 
@@ -61,6 +67,8 @@ class MigrationServiceTest {
                 TestTokens.authJson("old@example.com", 1893456000L), StandardCharsets.UTF_8);
         Files.writeString(userHome.resolve(".codex-shared").resolve("session_index.jsonl"),
                 "old-index", StandardCharsets.UTF_8);
+        Files.writeString(userHome.resolve(".codex-shared").resolve("state_5.sqlite"),
+                "old-state", StandardCharsets.UTF_8);
 
         RestoreResult result = fixture.migration.restore(zip, RestoreMode.BACKUP_THEN_REPLACE);
 
@@ -70,6 +78,8 @@ class MigrationServiceTest {
                 .parse(userHome.resolve(".codex-account1").resolve("auth.json"))
                 .getEmail());
         assertEquals("restored-index", Files.readString(userHome.resolve(".codex-shared").resolve("session_index.jsonl"),
+                StandardCharsets.UTF_8));
+        assertEquals("restored-state", Files.readString(userHome.resolve(".codex-shared").resolve("state_5.sqlite"),
                 StandardCharsets.UTF_8));
     }
 

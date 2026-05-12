@@ -21,6 +21,7 @@ import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
@@ -29,7 +30,7 @@ import java.util.zip.ZipOutputStream;
 public final class MigrationService {
     public static final String APP_VERSION = "1.0.0";
     private static final String MANIFEST = "manifest.properties";
-    private static final Set<String> ACCOUNT_TOP_LEVEL_SKIPS = Set.of("sessions", "archived_sessions", "session_index.jsonl");
+    private static final Set<String> ACCOUNT_TOP_LEVEL_SKIPS = sharedTopLevelNames();
 
     private final AppPaths paths;
     private final AccountRepository accountRepository;
@@ -301,5 +302,11 @@ public final class MigrationService {
 
     private static String toZipName(Path relative) {
         return relative.toString().replace('\\', '/');
+    }
+
+    private static Set<String> sharedTopLevelNames() {
+        Set<String> names = LinkService.SHARED_DIRS.stream().collect(Collectors.toSet());
+        names.addAll(LinkService.SHARED_FILES);
+        return Set.copyOf(names);
     }
 }

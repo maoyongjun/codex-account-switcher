@@ -9,8 +9,17 @@ import java.nio.file.StandardCopyOption;
 import java.util.List;
 
 public final class LinkService {
-    public static final List<String> SHARED_DIRS = List.of("sessions", "archived_sessions");
-    public static final List<String> SHARED_FILES = List.of("session_index.jsonl");
+    public static final List<String> SHARED_DIRS = List.of("sessions", "archived_sessions", "sqlite");
+    public static final List<String> SHARED_FILES = List.of(
+            ".codex-global-state.json",
+            ".codex-global-state.json.bak",
+            "session_index.jsonl",
+            "logs_2.sqlite",
+            "logs_2.sqlite-shm",
+            "logs_2.sqlite-wal",
+            "state_5.sqlite",
+            "state_5.sqlite-shm",
+            "state_5.sqlite-wal");
 
     private final AppPaths paths;
     private final boolean nativeLinks;
