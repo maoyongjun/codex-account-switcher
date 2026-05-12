@@ -73,6 +73,7 @@ public final class AccountRepository {
         copyIfExists(getAuthPath(accountHome), legacyHome.resolve("auth.json"));
         copyIfExists(getConfigPath(accountHome), legacyHome.resolve("config.toml"));
         linkService.ensureSharedLinks(legacyHome);
+        CodexDesktopStateSync.syncRecentThreads(accountHome, legacyHome);
         Files.writeString(legacyHome.resolve("active_account_slot.txt"), String.valueOf(slot), StandardCharsets.US_ASCII);
     }
 

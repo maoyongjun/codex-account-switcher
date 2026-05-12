@@ -11,8 +11,6 @@ import java.util.List;
 public final class LinkService {
     public static final List<String> SHARED_DIRS = List.of("sessions", "archived_sessions", "sqlite");
     public static final List<String> SHARED_FILES = List.of(
-            ".codex-global-state.json",
-            ".codex-global-state.json.bak",
             "session_index.jsonl",
             "logs_2.sqlite",
             "logs_2.sqlite-shm",

@@ -8,6 +8,7 @@ C:\workspace\ju-chat\codex-account-switcher\src\main\java\com\juchat\codexswitch
 C:\workspace\ju-chat\codex-account-switcher\src\main\java\com\juchat\codexswitcher\service\AccountRepository.java
 C:\workspace\ju-chat\codex-account-switcher\src\main\java\com\juchat\codexswitcher\service\AppPaths.java
 C:\workspace\ju-chat\codex-account-switcher\src\main\java\com\juchat\codexswitcher\service\AuthTokenParser.java
+C:\workspace\ju-chat\codex-account-switcher\src\main\java\com\juchat\codexswitcher\service\CodexDesktopStateSync.java
 C:\workspace\ju-chat\codex-account-switcher\src\main\java\com\juchat\codexswitcher\service\CursorLauncher.java
 C:\workspace\ju-chat\codex-account-switcher\src\main\java\com\juchat\codexswitcher\service\LinkService.java
 C:\workspace\ju-chat\codex-account-switcher\src\main\java\com\juchat\codexswitcher\service\MigrationService.java

@@ -40,7 +40,13 @@ public final class CursorLauncher {
     }
 
     public LaunchResult launchCodexApp(int slot, Path accountHome) throws IOException {
-        processManager.stopCursorAndCodex();
+        return launchCodexApp(slot, accountHome, true);
+    }
+
+    public LaunchResult launchCodexApp(int slot, Path accountHome, boolean stopExisting) throws IOException {
+        if (stopExisting) {
+            processManager.stopCursorAndCodex();
+        }
         Path codex = findCodexPath();
         Path workspace = resolveCodexWorkspace(accountHome);
         String executableName = codex.getFileName().toString();
@@ -49,6 +55,10 @@ public final class CursorLauncher {
                 : new ProcessBuilder(codex.toString(), workspace.toString());
         startWithAccountEnvironment(builder, slot, accountHome);
         return new LaunchResult(slot, accountHome, codex, "Codex");
+    }
+
+    public void stopRunningApps() {
+        processManager.stopCursorAndCodex();
     }
 
     public Path findCursorPath() throws IOException {

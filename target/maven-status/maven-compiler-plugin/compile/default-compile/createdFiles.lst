@@ -1,6 +1,7 @@
 com\juchat\codexswitcher\model\LaunchResult.class
 com\juchat\codexswitcher\service\AppPaths.class
 com\juchat\codexswitcher\model\RestoreMode.class
+com\juchat\codexswitcher\service\CodexDesktopStateSync$ThreadHint.class
 com\juchat\codexswitcher\service\MigrationService.class
 com\juchat\codexswitcher\CodexAccountSwitcherApp.class
 com\juchat\codexswitcher\model\AccountSummary.class
@@ -16,4 +17,5 @@ com\juchat\codexswitcher\service\ProcessManager.class
 com\juchat\codexswitcher\service\AccountRepository$1.class
 com\juchat\codexswitcher\model\RestoreResult.class
 com\juchat\codexswitcher\Launcher.class
+com\juchat\codexswitcher\service\CodexDesktopStateSync.class
 com\juchat\codexswitcher\CodexAccountSwitcherApp$AccountCell.class

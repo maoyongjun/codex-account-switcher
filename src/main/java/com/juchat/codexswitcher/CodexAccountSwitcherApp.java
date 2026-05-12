@@ -228,10 +228,11 @@ public final class CodexAccountSwitcherApp extends Application {
         runBackground("启动 " + target + " 账号 " + selected.getSlot(), () -> {
             Path accountHome = accountRepository.prepareSlot(selected.getSlot());
             if (codexApp) {
+                cursorLauncher.stopRunningApps();
                 accountRepository.activateSlotForDefaultCodexHome(selected.getSlot());
             }
             LaunchResult result = codexApp
-                    ? cursorLauncher.launchCodexApp(selected.getSlot(), accountHome)
+                    ? cursorLauncher.launchCodexApp(selected.getSlot(), accountHome, false)
                     : cursorLauncher.launchCursor(selected.getSlot(), accountHome);
             return "已启动 Account " + result.getSlot() + "，" + result.getTargetName() + "：" + result.getExecutablePath();
         }, true);
