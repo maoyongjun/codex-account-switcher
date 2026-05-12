@@ -50,6 +50,23 @@ class AccountRepositoryTest {
         assertTrue(slot3.isPrepared());
     }
 
+    @Test
+    void activateSlotForDefaultCodexHomeCopiesAuthConfigAndMarker() throws Exception {
+        Files.createDirectories(userHome.resolve(".codex-account2"));
+        Files.writeString(userHome.resolve(".codex-account2").resolve("auth.json"),
+                TestTokens.authJson("slot2@example.com", 1893456000L), StandardCharsets.UTF_8);
+        Files.writeString(userHome.resolve(".codex-account2").resolve("config.toml"),
+                "model = \"gpt-5.5\"", StandardCharsets.UTF_8);
+
+        repository(userHome).activateSlotForDefaultCodexHome(2);
+
+        assertTrue(Files.exists(userHome.resolve(".codex").resolve("auth.json")));
+        assertEquals("2", Files.readString(userHome.resolve(".codex").resolve("active_account_slot.txt"),
+                StandardCharsets.US_ASCII));
+        assertTrue(Files.readString(userHome.resolve(".codex").resolve("config.toml"), StandardCharsets.UTF_8)
+                .contains("gpt-5.5"));
+    }
+
     private static AccountRepository repository(Path userHome) {
         AppPaths paths = new AppPaths(userHome);
         return new AccountRepository(paths, new AuthTokenParser(), new LinkService(paths, false));

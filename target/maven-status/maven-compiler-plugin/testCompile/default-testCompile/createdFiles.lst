@@ -1,5 +1,6 @@
 com\juchat\codexswitcher\service\AuthTokenParserTest.class
 com\juchat\codexswitcher\service\MigrationServiceTest$ServiceFixture.class
 com\juchat\codexswitcher\service\AccountRepositoryTest.class
+com\juchat\codexswitcher\service\CursorLauncherTest.class
 com\juchat\codexswitcher\service\TestTokens.class
 com\juchat\codexswitcher\service\MigrationServiceTest.class

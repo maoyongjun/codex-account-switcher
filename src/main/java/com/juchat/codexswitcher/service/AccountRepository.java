@@ -64,6 +64,17 @@ public final class AccountRepository {
         return accountHome;
     }
 
+    public void activateSlotForDefaultCodexHome(int slot) throws IOException {
+        validateSlot(slot);
+        Path accountHome = prepareSlot(slot);
+        Path legacyHome = paths.legacyHome();
+        Files.createDirectories(legacyHome);
+
+        copyIfExists(getAuthPath(accountHome), legacyHome.resolve("auth.json"));
+        copyIfExists(getConfigPath(accountHome), legacyHome.resolve("config.toml"));
+        Files.writeString(legacyHome.resolve("active_account_slot.txt"), String.valueOf(slot), StandardCharsets.US_ASCII);
+    }
+
     public void prepareAll() throws IOException {
         for (int slot = 1; slot <= MAX_ACCOUNTS; slot++) {
             prepareSlot(slot);
@@ -118,6 +129,13 @@ public final class AccountRepository {
         }
         if (!Files.exists(accountAuth) || Files.getLastModifiedTime(legacyAuth).compareTo(Files.getLastModifiedTime(accountAuth)) > 0) {
             Files.copy(legacyAuth, accountAuth, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES);
+        }
+    }
+
+    private static void copyIfExists(Path source, Path destination) throws IOException {
+        if (Files.exists(source)) {
+            Files.createDirectories(destination.getParent());
+            Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES);
         }
     }
 

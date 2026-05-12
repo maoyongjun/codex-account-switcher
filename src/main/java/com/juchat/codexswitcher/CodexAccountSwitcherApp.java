@@ -135,17 +135,19 @@ public final class CodexAccountSwitcherApp extends Application {
 
         HBox actions = new HBox(10);
         actions.setAlignment(Pos.CENTER_LEFT);
-        Button launchButton = actionButton("启动账号");
+        Button launchCursorButton = actionButton("启动 Cursor");
+        Button launchCodexButton = actionButton("启动 Codex");
         Button prepareButton = actionButton("准备全部账号");
         Button exportButton = actionButton("导出全部账号");
         Button restoreButton = actionButton("恢复账号包");
         Button refreshButton = actionButton("刷新状态");
-        launchButton.setOnAction(event -> launchSelectedAccount());
+        launchCursorButton.setOnAction(event -> launchSelectedAccount(false));
+        launchCodexButton.setOnAction(event -> launchSelectedAccount(true));
         prepareButton.setOnAction(event -> prepareAllAccounts());
         exportButton.setOnAction(event -> exportAccounts(stage));
         restoreButton.setOnAction(event -> restoreAccounts(stage));
         refreshButton.setOnAction(event -> refreshAccounts());
-        actions.getChildren().addAll(launchButton, prepareButton, exportButton, restoreButton, refreshButton);
+        actions.getChildren().addAll(launchCursorButton, launchCodexButton, prepareButton, exportButton, restoreButton, refreshButton);
 
         Label logTitle = new Label("最近操作日志");
         logTitle.getStyleClass().add("section-title");
@@ -216,16 +218,22 @@ public final class CodexAccountSwitcherApp extends Application {
         return accountList == null ? null : accountList.getSelectionModel().getSelectedItem();
     }
 
-    private void launchSelectedAccount() {
+    private void launchSelectedAccount(boolean codexApp) {
         AccountSummary selected = selectedAccount();
         if (selected == null) {
             showWarning("请先选择一个账号。");
             return;
         }
-        runBackground("启动账号 " + selected.getSlot(), () -> {
+        String target = codexApp ? "Codex" : "Cursor";
+        runBackground("启动 " + target + " 账号 " + selected.getSlot(), () -> {
             Path accountHome = accountRepository.prepareSlot(selected.getSlot());
-            LaunchResult result = cursorLauncher.launch(selected.getSlot(), accountHome);
-            return "已启动 Account " + result.getSlot() + "，Cursor：" + result.getCursorPath();
+            if (codexApp) {
+                accountRepository.activateSlotForDefaultCodexHome(selected.getSlot());
+            }
+            LaunchResult result = codexApp
+                    ? cursorLauncher.launchCodexApp(selected.getSlot(), accountHome)
+                    : cursorLauncher.launchCursor(selected.getSlot(), accountHome);
+            return "已启动 Account " + result.getSlot() + "，" + result.getTargetName() + "：" + result.getExecutablePath();
         }, true);
     }
 
