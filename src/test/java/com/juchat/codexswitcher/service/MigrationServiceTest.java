@@ -37,7 +37,7 @@ class MigrationServiceTest {
         Properties manifest = fixture.migration.readManifest(zip);
         assertEquals("1", manifest.getProperty("schemaVersion"));
         assertEquals("1.0.0", manifest.getProperty("appVersion"));
-        assertEquals("7", manifest.getProperty("maxAccounts"));
+        assertEquals("15", manifest.getProperty("maxAccounts"));
         assertEquals("plainZip", manifest.getProperty("exportSecurity"));
         assertEquals("true", manifest.getProperty("includesShared"));
 

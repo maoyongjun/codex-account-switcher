@@ -39,7 +39,7 @@ class AccountRepositoryTest {
     }
 
     @Test
-    void listAccountsAlwaysReturnsSevenSlotsWithAuthSummary() throws Exception {
+    void listAccountsAlwaysReturnsFifteenSlotsWithAuthSummary() throws Exception {
         Files.createDirectories(userHome.resolve(".codex-account3"));
         Files.writeString(userHome.resolve(".codex-account3").resolve("auth.json"),
                 TestTokens.authJson("slot3@example.com", 1893456000L), StandardCharsets.UTF_8);

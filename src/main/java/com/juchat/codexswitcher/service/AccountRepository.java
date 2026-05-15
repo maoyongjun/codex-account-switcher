@@ -17,7 +17,7 @@ import java.util.EnumSet;
 import java.util.List;
 
 public final class AccountRepository {
-    public static final int MAX_ACCOUNTS = 7;
+    public static final int MAX_ACCOUNTS = 15;
 
     private final AppPaths paths;
     private final AuthTokenParser authTokenParser;
