@@ -42,11 +42,13 @@ final class CodexDesktopStateSync {
         Path statePath = desktopHome.resolve(".codex-global-state.json");
         String state = Files.exists(statePath) ? Files.readString(statePath, StandardCharsets.UTF_8) : "{}";
 
-        Set<String> projectlessThreadIds = new LinkedHashSet<>();
+        Set<String> recentThreadIds = new LinkedHashSet<>();
         for (ThreadHint thread : recentThreads) {
-            projectlessThreadIds.add(thread.id());
+            recentThreadIds.add(thread.id());
         }
-        projectlessThreadIds.addAll(readStringArrayProperty(state, "projectless-thread-ids"));
+
+        Set<String> projectlessThreadIds = new LinkedHashSet<>(readStringArrayProperty(state, "projectless-thread-ids"));
+        projectlessThreadIds.removeAll(recentThreadIds);
 
         Map<String, String> workspaceHints = new LinkedHashMap<>();
         for (ThreadHint thread : recentThreads) {

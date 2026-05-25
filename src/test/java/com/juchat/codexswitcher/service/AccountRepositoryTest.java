@@ -21,6 +21,9 @@ class AccountRepositoryTest {
         Files.createDirectories(userHome.resolve(".codex"));
         Files.writeString(userHome.resolve(".codex").resolve("auth_user1.json"),
                 TestTokens.authJson("legacy@example.com", 1893456000L), StandardCharsets.UTF_8);
+        Files.createDirectories(userHome.resolve(".codex-shared"));
+        Files.writeString(userHome.resolve(".codex-shared").resolve("state_5.sqlite"),
+                "stale-shared-cache", StandardCharsets.UTF_8);
 
         AccountRepository repository = repository(userHome);
         Path accountHome = repository.prepareSlot(1);
@@ -35,7 +38,7 @@ class AccountRepositoryTest {
         assertTrue(Files.isDirectory(userHome.resolve(".codex-shared").resolve("sqlite")));
         assertTrue(Files.exists(userHome.resolve(".codex-shared").resolve("session_index.jsonl")));
         assertTrue(Files.exists(userHome.resolve(".codex-shared").resolve("logs_2.sqlite")));
-        assertTrue(Files.exists(userHome.resolve(".codex-shared").resolve("state_5.sqlite")));
+        assertTrue(Files.notExists(userHome.resolve(".codex-shared").resolve("state_5.sqlite")));
     }
 
     @Test
@@ -68,11 +71,11 @@ class AccountRepositoryTest {
                 StandardCharsets.US_ASCII));
         assertTrue(Files.readString(userHome.resolve(".codex").resolve("config.toml"), StandardCharsets.UTF_8)
                 .contains("gpt-5.5"));
-        assertTrue(Files.exists(userHome.resolve(".codex").resolve("state_5.sqlite")));
+        assertTrue(Files.notExists(userHome.resolve(".codex").resolve("state_5.sqlite")));
     }
 
     @Test
-    void activateSlotForDefaultCodexHomeBackfillsDesktopConversationState() throws Exception {
+    void activateSlotForDefaultCodexHomeBackfillsDesktopWorkspaceHints() throws Exception {
         Path workspace = Files.createDirectories(userHome.resolve("workspace"));
         Path accountHome = Files.createDirectories(userHome.resolve(".codex-account4"));
         Files.writeString(accountHome.resolve("auth.json"),
@@ -97,7 +100,7 @@ class AccountRepositoryTest {
         String state = Files.readString(userHome.resolve(".codex").resolve(".codex-global-state.json"),
                 StandardCharsets.UTF_8);
         assertTrue(state.contains(recentId));
-        assertTrue(state.contains("\"projectless-thread-ids\":[\"" + recentId + "\",\"existing\"]"));
+        assertTrue(state.contains("\"projectless-thread-ids\":[\"existing\"]"));
         assertTrue(state.contains(workspace.toAbsolutePath().normalize().toString().replace("\\", "\\\\")));
         assertEquals(state, Files.readString(userHome.resolve(".codex").resolve(".codex-global-state.json.bak"),
                 StandardCharsets.UTF_8));
@@ -121,6 +124,26 @@ class AccountRepositoryTest {
                 StandardCharsets.UTF_8);
         assertTrue(index.contains(archivedId));
         assertTrue(index.contains("\"thread_name\":\"Archived 2026-03-05T02:55:51.000Z\""));
+    }
+
+    @Test
+    void activateSlotForDefaultCodexHomeClearsDerivedStateCaches() throws Exception {
+        Path accountHome = Files.createDirectories(userHome.resolve(".codex-account6"));
+        Files.writeString(accountHome.resolve("auth.json"),
+                TestTokens.authJson("slot6@example.com", 1893456000L), StandardCharsets.UTF_8);
+        Files.writeString(accountHome.resolve("state_5.sqlite"), "account-cache", StandardCharsets.UTF_8);
+
+        Path desktopHome = Files.createDirectories(userHome.resolve(".codex"));
+        Files.writeString(desktopHome.resolve("state_5.sqlite"), "desktop-cache", StandardCharsets.UTF_8);
+        Files.createDirectories(userHome.resolve(".codex-shared"));
+        Files.writeString(userHome.resolve(".codex-shared").resolve("state_5.sqlite"),
+                "shared-cache", StandardCharsets.UTF_8);
+
+        repository(userHome).activateSlotForDefaultCodexHome(6);
+
+        assertTrue(Files.notExists(accountHome.resolve("state_5.sqlite")));
+        assertTrue(Files.notExists(desktopHome.resolve("state_5.sqlite")));
+        assertTrue(Files.notExists(userHome.resolve(".codex-shared").resolve("state_5.sqlite")));
     }
 
     private static AccountRepository repository(Path userHome) {

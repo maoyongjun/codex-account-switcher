@@ -33,6 +33,8 @@ class MigrationServiceTest {
                 "shared-chat", StandardCharsets.UTF_8);
         Files.writeString(userHome.resolve(".codex-shared").resolve("logs_2.sqlite"),
                 "shared-logs", StandardCharsets.UTF_8);
+        Files.writeString(userHome.resolve(".codex-shared").resolve("state_5.sqlite"),
+                "shared-state-cache", StandardCharsets.UTF_8);
 
         Path zip = userHome.resolve("codex-export.zip");
         fixture.migration.exportAll(zip);
@@ -48,6 +50,7 @@ class MigrationServiceTest {
             assertNotNull(zipFile.getEntry("accounts/account1/auth.json"));
             assertNotNull(zipFile.getEntry("shared/sessions/chat.jsonl"));
             assertNotNull(zipFile.getEntry("shared/logs_2.sqlite"));
+            assertFalse(zipFile.stream().anyMatch(entry -> entry.getName().equals("shared/state_5.sqlite")));
             assertFalse(zipFile.stream().anyMatch(entry -> entry.getName().startsWith("accounts/account1/sessions/")));
             assertFalse(zipFile.stream().anyMatch(entry -> entry.getName().equals("accounts/account1/logs_2.sqlite")));
         }
@@ -102,8 +105,7 @@ class MigrationServiceTest {
                 .getEmail());
         assertEquals("restored-index", Files.readString(userHome.resolve(".codex-shared").resolve("session_index.jsonl"),
                 StandardCharsets.UTF_8));
-        assertEquals("restored-state", Files.readString(userHome.resolve(".codex-shared").resolve("state_5.sqlite"),
-                StandardCharsets.UTF_8));
+        assertFalse(Files.exists(userHome.resolve(".codex-shared").resolve("state_5.sqlite")));
     }
 
     private static ServiceFixture fixture(Path userHome) {

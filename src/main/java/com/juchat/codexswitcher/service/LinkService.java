@@ -14,7 +14,8 @@ public final class LinkService {
             "session_index.jsonl",
             "logs_2.sqlite",
             "logs_2.sqlite-shm",
-            "logs_2.sqlite-wal",
+            "logs_2.sqlite-wal");
+    public static final List<String> DERIVED_CACHE_FILES = List.of(
             "state_5.sqlite",
             "state_5.sqlite-shm",
             "state_5.sqlite-wal");
@@ -37,6 +38,12 @@ public final class LinkService {
         }
         for (String name : SHARED_FILES) {
             newSharedFileLink(accountHome, name);
+        }
+    }
+
+    public void resetDerivedState(Path home) throws IOException {
+        for (String name : DERIVED_CACHE_FILES) {
+            Files.deleteIfExists(home.resolve(name));
         }
     }
 

@@ -60,6 +60,7 @@ public final class AccountRepository {
         importLegacyAuthIfNewer(slot, accountHome);
         ensureConfig(accountHome);
         linkService.ensureSharedLinks(accountHome);
+        linkService.resetDerivedState(accountHome);
         Files.writeString(accountHome.resolve("account_slot.txt"), String.valueOf(slot), StandardCharsets.US_ASCII);
         return accountHome;
     }
@@ -73,6 +74,7 @@ public final class AccountRepository {
         copyIfExists(getAuthPath(accountHome), legacyHome.resolve("auth.json"));
         copyIfExists(getConfigPath(accountHome), legacyHome.resolve("config.toml"));
         linkService.ensureSharedLinks(legacyHome);
+        linkService.resetDerivedState(legacyHome);
         CodexDesktopStateSync.syncRecentThreads(accountHome, legacyHome);
         Files.writeString(legacyHome.resolve("active_account_slot.txt"), String.valueOf(slot), StandardCharsets.US_ASCII);
     }
@@ -121,6 +123,7 @@ public final class AccountRepository {
                 }
             }
         }
+        linkService.resetDerivedState(paths.sharedHome());
     }
 
     private void importLegacyAuthIfNewer(int slot, Path accountHome) throws IOException {

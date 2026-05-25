@@ -61,7 +61,7 @@ public final class MigrationService {
             for (int slot = 1; slot <= AccountRepository.MAX_ACCOUNTS; slot++) {
                 addTree(zip, writtenEntries, paths.accountHome(slot), "accounts/account" + slot + "/", ACCOUNT_TOP_LEVEL_SKIPS);
             }
-            addTree(zip, writtenEntries, paths.sharedHome(), "shared/", Set.of());
+            addTree(zip, writtenEntries, paths.sharedHome(), "shared/", Set.copyOf(LinkService.DERIVED_CACHE_FILES));
             addLegacyFiles(zip, writtenEntries);
         }
         return normalizedZip;
@@ -316,6 +316,7 @@ public final class MigrationService {
     private static Set<String> sharedTopLevelNames() {
         Set<String> names = LinkService.SHARED_DIRS.stream().collect(Collectors.toSet());
         names.addAll(LinkService.SHARED_FILES);
+        names.addAll(LinkService.DERIVED_CACHE_FILES);
         return Set.copyOf(names);
     }
 }
