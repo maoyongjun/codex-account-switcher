@@ -1,11 +1,13 @@
 package com.juchat.codexswitcher.service;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -21,6 +23,9 @@ final class CodexDesktopStateSync {
     private static final Pattern SESSION_ID_PATTERN = Pattern.compile("\"id\"\\s*:\\s*\"([^\"]+)\"");
     private static final Pattern UUID_PATTERN =
             Pattern.compile("([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})");
+    private static final Pattern SESSION_META_TYPE_PATTERN = Pattern.compile("\"type\"\\s*:\\s*\"session_meta\"");
+    private static final Pattern SESSION_PAYLOAD_OBJECT_PATTERN = Pattern.compile("\"payload\"\\s*:\\s*\\{");
+    private static final Pattern SESSION_THREAD_SOURCE_PATTERN = Pattern.compile("\"thread_source\"\\s*:");
     private static final Pattern SESSION_TIMESTAMP_PATTERN = Pattern.compile("\"timestamp\"\\s*:\\s*\"([^\"]+)\"");
     private static final Pattern SESSION_CWD_PATTERN = Pattern.compile("\"cwd\"\\s*:\\s*\"((?:\\\\.|[^\"])*)\"");
     private static final Pattern JSON_STRING_PATTERN = Pattern.compile("\"((?:\\\\.|[^\"])*)\"");
@@ -84,6 +89,7 @@ final class CodexDesktopStateSync {
         List<IndexedThread> missingThreads = new ArrayList<>();
         try (var stream = Files.walk(archivedSessions, 5)) {
             for (Path file : stream.filter(Files::isRegularFile).toList()) {
+                ensureArchivedSessionThreadSource(file);
                 IndexedThread thread = readIndexedThread(file);
                 if (thread != null && indexedIds.add(thread.id())) {
                     missingThreads.add(thread);
@@ -101,6 +107,61 @@ final class CodexDesktopStateSync {
         }
         Files.createDirectories(index.getParent());
         Files.write(index, lines, StandardCharsets.UTF_8);
+    }
+
+    private static void ensureArchivedSessionThreadSource(Path sessionFile) throws IOException {
+        String firstLine;
+        try (BufferedReader reader = Files.newBufferedReader(sessionFile, StandardCharsets.UTF_8)) {
+            firstLine = reader.readLine();
+        }
+
+        String updatedFirstLine = addUserThreadSource(firstLine);
+        if (updatedFirstLine == null || updatedFirstLine.equals(firstLine)) {
+            return;
+        }
+
+        Path tempFile = sessionFile.resolveSibling(sessionFile.getFileName() + ".threadsource.tmp");
+        try (BufferedReader reader = Files.newBufferedReader(sessionFile, StandardCharsets.UTF_8);
+             BufferedWriter writer = Files.newBufferedWriter(tempFile, StandardCharsets.UTF_8)) {
+            reader.readLine();
+            writer.write(updatedFirstLine);
+            writer.newLine();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                writer.write(line);
+                writer.newLine();
+            }
+        }
+        Files.move(tempFile, sessionFile, StandardCopyOption.REPLACE_EXISTING);
+    }
+
+    private static String addUserThreadSource(String firstLine) {
+        if (firstLine == null
+                || !SESSION_META_TYPE_PATTERN.matcher(firstLine).find()
+                || SESSION_THREAD_SOURCE_PATTERN.matcher(firstLine).find()) {
+            return firstLine;
+        }
+
+        Matcher payload = SESSION_PAYLOAD_OBJECT_PATTERN.matcher(firstLine);
+        if (!payload.find()) {
+            return firstLine;
+        }
+
+        int insertAt = payload.end();
+        String separator = hasMorePayloadProperties(firstLine, insertAt) ? "," : "";
+        return firstLine.substring(0, insertAt)
+                + quoteJson("thread_source") + ":" + quoteJson("user") + separator
+                + firstLine.substring(insertAt);
+    }
+
+    private static boolean hasMorePayloadProperties(String json, int offset) {
+        for (int i = offset; i < json.length(); i++) {
+            char ch = json.charAt(i);
+            if (!Character.isWhitespace(ch)) {
+                return ch != '}';
+            }
+        }
+        return false;
     }
 
     private static List<ThreadHint> readRecentThreadHints(Path accountHome, int limit) throws IOException {

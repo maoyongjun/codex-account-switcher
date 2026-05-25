@@ -42,9 +42,8 @@ public final class LinkService {
     }
 
     public void resetDerivedState(Path home) throws IOException {
-        for (String name : DERIVED_CACHE_FILES) {
-            Files.deleteIfExists(home.resolve(name));
-        }
+        // Keep Codex Desktop's local thread cache intact during account switches.
+        // The durable history is still sessions/archived_sessions/session_index.jsonl.
     }
 
     private void newSharedDirectoryLink(Path accountHome, String name) throws IOException {

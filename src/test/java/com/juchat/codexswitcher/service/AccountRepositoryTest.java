@@ -38,7 +38,8 @@ class AccountRepositoryTest {
         assertTrue(Files.isDirectory(userHome.resolve(".codex-shared").resolve("sqlite")));
         assertTrue(Files.exists(userHome.resolve(".codex-shared").resolve("session_index.jsonl")));
         assertTrue(Files.exists(userHome.resolve(".codex-shared").resolve("logs_2.sqlite")));
-        assertTrue(Files.notExists(userHome.resolve(".codex-shared").resolve("state_5.sqlite")));
+        assertEquals("stale-shared-cache", Files.readString(userHome.resolve(".codex-shared").resolve("state_5.sqlite"),
+                StandardCharsets.UTF_8));
     }
 
     @Test
@@ -71,7 +72,6 @@ class AccountRepositoryTest {
                 StandardCharsets.US_ASCII));
         assertTrue(Files.readString(userHome.resolve(".codex").resolve("config.toml"), StandardCharsets.UTF_8)
                 .contains("gpt-5.5"));
-        assertTrue(Files.notExists(userHome.resolve(".codex").resolve("state_5.sqlite")));
     }
 
     @Test
@@ -122,12 +122,15 @@ class AccountRepositoryTest {
 
         String index = Files.readString(userHome.resolve(".codex-account5").resolve("session_index.jsonl"),
                 StandardCharsets.UTF_8);
+        String archivedSession = Files.readString(archivedSessions.resolve("rollout-2026-03-05T10-55-51-"
+                + archivedId + ".jsonl"), StandardCharsets.UTF_8);
         assertTrue(index.contains(archivedId));
         assertTrue(index.contains("\"thread_name\":\"Archived 2026-03-05T02:55:51.000Z\""));
+        assertTrue(archivedSession.contains("\"thread_source\":\"user\""));
     }
 
     @Test
-    void activateSlotForDefaultCodexHomeClearsDerivedStateCaches() throws Exception {
+    void activateSlotForDefaultCodexHomePreservesDerivedStateCaches() throws Exception {
         Path accountHome = Files.createDirectories(userHome.resolve(".codex-account6"));
         Files.writeString(accountHome.resolve("auth.json"),
                 TestTokens.authJson("slot6@example.com", 1893456000L), StandardCharsets.UTF_8);
@@ -141,9 +144,10 @@ class AccountRepositoryTest {
 
         repository(userHome).activateSlotForDefaultCodexHome(6);
 
-        assertTrue(Files.notExists(accountHome.resolve("state_5.sqlite")));
-        assertTrue(Files.notExists(desktopHome.resolve("state_5.sqlite")));
-        assertTrue(Files.notExists(userHome.resolve(".codex-shared").resolve("state_5.sqlite")));
+        assertEquals("account-cache", Files.readString(accountHome.resolve("state_5.sqlite"), StandardCharsets.UTF_8));
+        assertEquals("desktop-cache", Files.readString(desktopHome.resolve("state_5.sqlite"), StandardCharsets.UTF_8));
+        assertEquals("shared-cache", Files.readString(userHome.resolve(".codex-shared").resolve("state_5.sqlite"),
+                StandardCharsets.UTF_8));
     }
 
     private static AccountRepository repository(Path userHome) {
