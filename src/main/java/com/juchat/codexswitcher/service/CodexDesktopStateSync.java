@@ -19,6 +19,9 @@ import java.util.regex.Pattern;
 final class CodexDesktopStateSync {
     private static final int RECENT_THREAD_LIMIT = 50;
     private static final Pattern SESSION_ID_PATTERN = Pattern.compile("\"id\"\\s*:\\s*\"([^\"]+)\"");
+    private static final Pattern UUID_PATTERN =
+            Pattern.compile("([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})");
+    private static final Pattern SESSION_TIMESTAMP_PATTERN = Pattern.compile("\"timestamp\"\\s*:\\s*\"([^\"]+)\"");
     private static final Pattern SESSION_CWD_PATTERN = Pattern.compile("\"cwd\"\\s*:\\s*\"((?:\\\\.|[^\"])*)\"");
     private static final Pattern JSON_STRING_PATTERN = Pattern.compile("\"((?:\\\\.|[^\"])*)\"");
     private static final Pattern JSON_STRING_ENTRY_PATTERN =
@@ -28,6 +31,8 @@ final class CodexDesktopStateSync {
     }
 
     static void syncRecentThreads(Path accountHome, Path desktopHome) throws IOException {
+        ensureArchivedSessionsIndexed(accountHome);
+
         List<ThreadHint> recentThreads = readRecentThreadHints(accountHome, RECENT_THREAD_LIMIT);
         if (recentThreads.isEmpty()) {
             return;
@@ -54,6 +59,46 @@ final class CodexDesktopStateSync {
         state = upsertStringObjectProperty(state, "thread-workspace-root-hints", workspaceHints);
         Files.writeString(statePath, state, StandardCharsets.UTF_8);
         Files.writeString(desktopHome.resolve(".codex-global-state.json.bak"), state, StandardCharsets.UTF_8);
+    }
+
+    private static void ensureArchivedSessionsIndexed(Path accountHome) throws IOException {
+        Path index = accountHome.resolve("session_index.jsonl");
+        Path archivedSessions = accountHome.resolve("archived_sessions");
+        if (!Files.isDirectory(archivedSessions)) {
+            return;
+        }
+
+        List<String> lines = Files.exists(index)
+                ? Files.readAllLines(index, StandardCharsets.UTF_8)
+                : new ArrayList<>();
+        Set<String> indexedIds = new LinkedHashSet<>();
+        for (String line : lines) {
+            String sessionId = extract(SESSION_ID_PATTERN, line);
+            if (sessionId != null) {
+                indexedIds.add(sessionId);
+            }
+        }
+
+        List<IndexedThread> missingThreads = new ArrayList<>();
+        try (var stream = Files.walk(archivedSessions, 5)) {
+            for (Path file : stream.filter(Files::isRegularFile).toList()) {
+                IndexedThread thread = readIndexedThread(file);
+                if (thread != null && indexedIds.add(thread.id())) {
+                    missingThreads.add(thread);
+                }
+            }
+        }
+
+        if (missingThreads.isEmpty()) {
+            return;
+        }
+
+        missingThreads.sort((left, right) -> left.updatedAt().compareTo(right.updatedAt()));
+        for (IndexedThread thread : missingThreads) {
+            lines.add(renderIndexLine(thread));
+        }
+        Files.createDirectories(index.getParent());
+        Files.write(index, lines, StandardCharsets.UTF_8);
     }
 
     private static List<ThreadHint> readRecentThreadHints(Path accountHome, int limit) throws IOException {
@@ -102,6 +147,25 @@ final class CodexDesktopStateSync {
             String firstLine = reader.readLine();
             String cwd = firstLine == null ? null : extract(SESSION_CWD_PATTERN, firstLine);
             return cwd == null || cwd.isBlank() ? null : Paths.get(unescapeJson(cwd));
+        }
+    }
+
+    private static IndexedThread readIndexedThread(Path sessionFile) throws IOException {
+        try (BufferedReader reader = Files.newBufferedReader(sessionFile, StandardCharsets.UTF_8)) {
+            String firstLine = reader.readLine();
+            String sessionId = extract(SESSION_ID_PATTERN, firstLine);
+            if (sessionId == null || sessionId.isBlank()) {
+                sessionId = extract(UUID_PATTERN, sessionFile.getFileName().toString());
+            }
+            if (sessionId == null || sessionId.isBlank()) {
+                return null;
+            }
+
+            String updatedAt = extract(SESSION_TIMESTAMP_PATTERN, firstLine);
+            if (updatedAt == null || updatedAt.isBlank()) {
+                updatedAt = Files.getLastModifiedTime(sessionFile).toInstant().toString();
+            }
+            return new IndexedThread(sessionId, "Archived " + updatedAt, updatedAt);
         }
     }
 
@@ -188,6 +252,12 @@ final class CodexDesktopStateSync {
         return builder.append('}').toString();
     }
 
+    private static String renderIndexLine(IndexedThread thread) {
+        return "{" + quoteJson("id") + ":" + quoteJson(thread.id())
+                + "," + quoteJson("thread_name") + ":" + quoteJson(thread.threadName())
+                + "," + quoteJson("updated_at") + ":" + quoteJson(thread.updatedAt()) + "}";
+    }
+
     private static Pattern arrayPropertyPattern(String key) {
         return Pattern.compile(quoteJson(key) + "\\s*:\\s*\\[(.*?)\\]", Pattern.DOTALL);
     }
@@ -262,5 +332,8 @@ final class CodexDesktopStateSync {
     }
 
     private record ThreadHint(String id, String cwd) {
+    }
+
+    private record IndexedThread(String id, String threadName, String updatedAt) {
     }
 }

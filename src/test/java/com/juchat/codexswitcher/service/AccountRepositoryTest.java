@@ -103,6 +103,26 @@ class AccountRepositoryTest {
                 StandardCharsets.UTF_8));
     }
 
+    @Test
+    void activateSlotForDefaultCodexHomeIndexesArchivedSessions() throws Exception {
+        Path accountHome = Files.createDirectories(userHome.resolve(".codex-account5"));
+        Files.writeString(accountHome.resolve("auth.json"),
+                TestTokens.authJson("slot5@example.com", 1893456000L), StandardCharsets.UTF_8);
+        Path archivedSessions = Files.createDirectories(accountHome.resolve("archived_sessions"));
+        String archivedId = "019cbbec-4bfa-71a1-8f45-d0a0a3221827";
+        Files.writeString(archivedSessions.resolve("rollout-2026-03-05T10-55-51-" + archivedId + ".jsonl"),
+                "{\"timestamp\":\"2026-03-05T02:55:51.000Z\",\"type\":\"session_meta\",\"payload\":{\"id\":\""
+                        + archivedId + "\",\"cwd\":\"C:\\\\workspace\"}}",
+                StandardCharsets.UTF_8);
+
+        repository(userHome).activateSlotForDefaultCodexHome(5);
+
+        String index = Files.readString(userHome.resolve(".codex-account5").resolve("session_index.jsonl"),
+                StandardCharsets.UTF_8);
+        assertTrue(index.contains(archivedId));
+        assertTrue(index.contains("\"thread_name\":\"Archived 2026-03-05T02:55:51.000Z\""));
+    }
+
     private static AccountRepository repository(Path userHome) {
         AppPaths paths = new AppPaths(userHome);
         return new AccountRepository(paths, new AuthTokenParser(), new LinkService(paths, false));

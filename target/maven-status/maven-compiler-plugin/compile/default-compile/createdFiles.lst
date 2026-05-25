@@ -19,3 +19,4 @@ com\juchat\codexswitcher\model\RestoreResult.class
 com\juchat\codexswitcher\Launcher.class
 com\juchat\codexswitcher\service\CodexDesktopStateSync.class
 com\juchat\codexswitcher\CodexAccountSwitcherApp$AccountCell.class
+com\juchat\codexswitcher\service\CodexDesktopStateSync$IndexedThread.class
