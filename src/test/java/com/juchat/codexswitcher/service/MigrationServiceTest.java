@@ -9,6 +9,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Properties;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 import java.util.zip.ZipFile;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -37,7 +40,7 @@ class MigrationServiceTest {
         Properties manifest = fixture.migration.readManifest(zip);
         assertEquals("1", manifest.getProperty("schemaVersion"));
         assertEquals("1.0.0", manifest.getProperty("appVersion"));
-        assertEquals("15", manifest.getProperty("maxAccounts"));
+        assertEquals("20", manifest.getProperty("maxAccounts"));
         assertEquals("plainZip", manifest.getProperty("exportSecurity"));
         assertEquals("true", manifest.getProperty("includesShared"));
 
@@ -48,6 +51,26 @@ class MigrationServiceTest {
             assertFalse(zipFile.stream().anyMatch(entry -> entry.getName().startsWith("accounts/account1/sessions/")));
             assertFalse(zipFile.stream().anyMatch(entry -> entry.getName().equals("accounts/account1/logs_2.sqlite")));
         }
+    }
+
+    @Test
+    void restoreAcceptsLegacyFifteenAccountManifest() throws Exception {
+        ServiceFixture fixture = fixture(userHome);
+        fixture.repository.prepareSlot(1);
+        Files.writeString(userHome.resolve(".codex-account1").resolve("auth.json"),
+                TestTokens.authJson("legacy-restore@example.com", 1893456000L), StandardCharsets.UTF_8);
+        Path exported = userHome.resolve("codex-export.zip");
+        fixture.migration.exportAll(exported);
+
+        Path legacyZip = userHome.resolve("codex-export-legacy-15.zip");
+        rewriteManifest(exported, legacyZip, "maxAccounts=20", "maxAccounts=15");
+
+        RestoreResult result = fixture.migration.restore(legacyZip, RestoreMode.BACKUP_THEN_REPLACE);
+
+        assertTrue(Files.isDirectory(result.getBackupRoot()));
+        assertEquals("legacy-restore@example.com", new AuthTokenParser()
+                .parse(userHome.resolve(".codex-account1").resolve("auth.json"))
+                .getEmail());
     }
 
     @Test
@@ -89,6 +112,29 @@ class MigrationServiceTest {
         MigrationService migration = new MigrationService(paths, repository, () -> {
         });
         return new ServiceFixture(repository, migration);
+    }
+
+    private static void rewriteManifest(Path sourceZip, Path targetZip, String from, String to) throws Exception {
+        Files.createDirectories(targetZip.getParent());
+        try (ZipInputStream input = new ZipInputStream(Files.newInputStream(sourceZip), StandardCharsets.UTF_8);
+             ZipOutputStream output = new ZipOutputStream(Files.newOutputStream(targetZip), StandardCharsets.UTF_8)) {
+            ZipEntry entry;
+            while ((entry = input.getNextEntry()) != null) {
+                ZipEntry copy = new ZipEntry(entry.getName());
+                copy.setTime(entry.getTime());
+                output.putNextEntry(copy);
+                if (!entry.isDirectory()) {
+                    if ("manifest.properties".equals(entry.getName())) {
+                        String manifest = new String(input.readAllBytes(), StandardCharsets.UTF_8)
+                                .replace(from, to);
+                        output.write(manifest.getBytes(StandardCharsets.UTF_8));
+                    } else {
+                        input.transferTo(output);
+                    }
+                }
+                output.closeEntry();
+            }
+        }
     }
 
     private record ServiceFixture(AccountRepository repository, MigrationService migration) {

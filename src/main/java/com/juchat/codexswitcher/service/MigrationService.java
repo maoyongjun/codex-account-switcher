@@ -29,6 +29,7 @@ import java.util.zip.ZipOutputStream;
 
 public final class MigrationService {
     public static final String APP_VERSION = "1.0.0";
+    private static final String LEGACY_MAX_ACCOUNTS = "15";
     private static final String MANIFEST = "manifest.properties";
     private static final Set<String> ACCOUNT_TOP_LEVEL_SKIPS = sharedTopLevelNames();
 
@@ -182,9 +183,17 @@ public final class MigrationService {
     private void validateManifest(Path zipPath) throws IOException {
         Properties manifest = readManifest(zipPath);
         requireManifestValue(manifest, "schemaVersion", "1");
-        requireManifestValue(manifest, "maxAccounts", String.valueOf(AccountRepository.MAX_ACCOUNTS));
+        requireSupportedMaxAccounts(manifest.getProperty("maxAccounts"));
         requireManifestValue(manifest, "exportSecurity", "plainZip");
         requireManifestValue(manifest, "includesShared", "true");
+    }
+
+    private static void requireSupportedMaxAccounts(String actual) throws IOException {
+        String current = String.valueOf(AccountRepository.MAX_ACCOUNTS);
+        if (!current.equals(actual) && !LEGACY_MAX_ACCOUNTS.equals(actual)) {
+            throw new IOException("Invalid manifest maxAccounts: expected " + current + " or "
+                    + LEGACY_MAX_ACCOUNTS + ", actual " + actual);
+        }
     }
 
     private static void requireManifestValue(Properties manifest, String key, String expected) throws IOException {
