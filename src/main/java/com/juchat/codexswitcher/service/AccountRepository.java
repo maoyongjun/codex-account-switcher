@@ -71,7 +71,7 @@ public final class AccountRepository {
         Path legacyHome = paths.legacyHome();
         Files.createDirectories(legacyHome);
 
-        copyIfExists(getAuthPath(accountHome), legacyHome.resolve("auth.json"));
+        copyOrDeleteAuth(getAuthPath(accountHome), legacyHome.resolve("auth.json"));
         copyIfExists(getConfigPath(accountHome), legacyHome.resolve("config.toml"));
         linkService.ensureSharedLinks(legacyHome);
         linkService.resetDerivedState(legacyHome);
@@ -82,6 +82,18 @@ public final class AccountRepository {
     public void prepareAll() throws IOException {
         for (int slot = 1; slot <= MAX_ACCOUNTS; slot++) {
             prepareSlot(slot);
+        }
+    }
+
+    public void clearSlotAuthentication(int slot) throws IOException {
+        validateSlot(slot);
+        Path accountHome = paths.accountHome(slot);
+        Files.deleteIfExists(getAuthPath(accountHome));
+        Files.deleteIfExists(getLegacyAuthPath(slot));
+
+        Path legacyHome = paths.legacyHome();
+        if (isActiveSlot(slot)) {
+            Files.deleteIfExists(legacyHome.resolve("auth.json"));
         }
     }
 
@@ -142,6 +154,24 @@ public final class AccountRepository {
             Files.createDirectories(destination.getParent());
             Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES);
         }
+    }
+
+    private static void copyOrDeleteAuth(Path source, Path destination) throws IOException {
+        if (Files.exists(source)) {
+            Files.createDirectories(destination.getParent());
+            Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES);
+        } else {
+            Files.deleteIfExists(destination);
+        }
+    }
+
+    private boolean isActiveSlot(int slot) throws IOException {
+        Path activeSlotPath = paths.legacyHome().resolve("active_account_slot.txt");
+        if (!Files.exists(activeSlotPath)) {
+            return false;
+        }
+        String activeSlot = Files.readString(activeSlotPath, StandardCharsets.US_ASCII).trim();
+        return activeSlot.equals(String.valueOf(slot));
     }
 
     private void ensureConfig(Path accountHome) throws IOException {

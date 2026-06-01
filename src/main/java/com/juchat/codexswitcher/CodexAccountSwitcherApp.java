@@ -30,8 +30,8 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TextArea;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
@@ -133,21 +133,24 @@ public final class CodexAccountSwitcherApp extends Application {
         addRow(grid, 4, "共享目录", sharedHomeValue);
         addRow(grid, 5, "目录状态", statusValue);
 
-        HBox actions = new HBox(10);
+        FlowPane actions = new FlowPane(10, 10);
         actions.setAlignment(Pos.CENTER_LEFT);
         Button launchCursorButton = actionButton("启动 Cursor");
         Button launchCodexButton = actionButton("启动 Codex");
         Button prepareButton = actionButton("准备全部账号");
+        Button clearLoginButton = actionButton("清空登录");
         Button exportButton = actionButton("导出全部账号");
         Button restoreButton = actionButton("恢复账号包");
         Button refreshButton = actionButton("刷新状态");
         launchCursorButton.setOnAction(event -> launchSelectedAccount(false));
         launchCodexButton.setOnAction(event -> launchSelectedAccount(true));
         prepareButton.setOnAction(event -> prepareAllAccounts());
+        clearLoginButton.setOnAction(event -> clearSelectedAccountAuthentication());
         exportButton.setOnAction(event -> exportAccounts(stage));
         restoreButton.setOnAction(event -> restoreAccounts(stage));
         refreshButton.setOnAction(event -> refreshAccounts());
-        actions.getChildren().addAll(launchCursorButton, launchCodexButton, prepareButton, exportButton, restoreButton, refreshButton);
+        actions.getChildren().addAll(launchCursorButton, launchCodexButton, prepareButton,
+                clearLoginButton, exportButton, restoreButton, refreshButton);
 
         Label logTitle = new Label("最近操作日志");
         logTitle.getStyleClass().add("section-title");
@@ -242,6 +245,28 @@ public final class CodexAccountSwitcherApp extends Application {
         runBackground("准备全部账号", () -> {
             accountRepository.prepareAll();
             return "已准备 1-" + AccountRepository.MAX_ACCOUNTS + " 个账号目录。";
+        }, true);
+    }
+
+    private void clearSelectedAccountAuthentication() {
+        AccountSummary selected = selectedAccount();
+        if (selected == null) {
+            showWarning("请先选择一个账号。");
+            return;
+        }
+
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("确认清空登录");
+        confirm.setHeaderText("清空 Account " + selected.getSlot() + " 的登录凭证？");
+        confirm.setContentText("这只会清空登录信息，不会删除配置、会话或共享数据。");
+        Optional<ButtonType> choice = confirm.showAndWait();
+        if (choice.isEmpty() || choice.get() != ButtonType.OK) {
+            return;
+        }
+
+        runBackground("清空 Account " + selected.getSlot() + " 登录凭证", () -> {
+            accountRepository.clearSlotAuthentication(selected.getSlot());
+            return "已清空 Account " + selected.getSlot() + " 的登录凭证。";
         }, true);
     }
 

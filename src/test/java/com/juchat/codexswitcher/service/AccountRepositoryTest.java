@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AccountRepositoryTest {
@@ -71,6 +72,64 @@ class AccountRepositoryTest {
         assertEquals("2", Files.readString(userHome.resolve(".codex").resolve("active_account_slot.txt"),
                 StandardCharsets.US_ASCII));
         assertTrue(Files.readString(userHome.resolve(".codex").resolve("config.toml"), StandardCharsets.UTF_8)
+                .contains("gpt-5.5"));
+    }
+
+    @Test
+    void clearSlotAuthenticationRemovesOnlyAuthFilesAndPreservesSlotData() throws Exception {
+        Path accountHome = Files.createDirectories(userHome.resolve(".codex-account7"));
+        Files.writeString(accountHome.resolve("auth.json"),
+                TestTokens.authJson("slot7@example.com", 1893456000L), StandardCharsets.UTF_8);
+        Files.writeString(accountHome.resolve("config.toml"), "model = \"gpt-5.5\"", StandardCharsets.UTF_8);
+        Files.createDirectories(accountHome.resolve("sessions"));
+        Files.writeString(accountHome.resolve("session_index.jsonl"), "{\"id\":\"session\"}", StandardCharsets.UTF_8);
+        Files.createDirectories(userHome.resolve(".codex"));
+        Files.writeString(userHome.resolve(".codex").resolve("auth_user7.json"),
+                TestTokens.authJson("legacy7@example.com", 1893456000L), StandardCharsets.UTF_8);
+        Files.createDirectories(userHome.resolve(".codex-shared").resolve("sessions"));
+
+        repository(userHome).clearSlotAuthentication(7);
+
+        assertFalse(Files.exists(accountHome.resolve("auth.json")));
+        assertFalse(Files.exists(userHome.resolve(".codex").resolve("auth_user7.json")));
+        assertTrue(Files.isDirectory(accountHome));
+        assertEquals("model = \"gpt-5.5\"",
+                Files.readString(accountHome.resolve("config.toml"), StandardCharsets.UTF_8));
+        assertTrue(Files.isDirectory(accountHome.resolve("sessions")));
+        assertTrue(Files.exists(accountHome.resolve("session_index.jsonl")));
+        assertTrue(Files.isDirectory(userHome.resolve(".codex-shared").resolve("sessions")));
+    }
+
+    @Test
+    void clearSlotAuthenticationRemovesDefaultAuthForActiveSlot() throws Exception {
+        Path accountHome = Files.createDirectories(userHome.resolve(".codex-account8"));
+        Files.writeString(accountHome.resolve("auth.json"),
+                TestTokens.authJson("slot8@example.com", 1893456000L), StandardCharsets.UTF_8);
+        Path legacyHome = Files.createDirectories(userHome.resolve(".codex"));
+        Files.writeString(legacyHome.resolve("auth.json"),
+                TestTokens.authJson("default@example.com", 1893456000L), StandardCharsets.UTF_8);
+        Files.writeString(legacyHome.resolve("active_account_slot.txt"), "8", StandardCharsets.US_ASCII);
+
+        repository(userHome).clearSlotAuthentication(8);
+
+        assertFalse(Files.exists(accountHome.resolve("auth.json")));
+        assertFalse(Files.exists(legacyHome.resolve("auth.json")));
+    }
+
+    @Test
+    void activateSlotForDefaultCodexHomeClearsDefaultAuthWhenSlotHasNoAuth() throws Exception {
+        Path accountHome = Files.createDirectories(userHome.resolve(".codex-account9"));
+        Files.writeString(accountHome.resolve("config.toml"), "model = \"gpt-5.5\"", StandardCharsets.UTF_8);
+        Path legacyHome = Files.createDirectories(userHome.resolve(".codex"));
+        Files.writeString(legacyHome.resolve("auth.json"),
+                TestTokens.authJson("old-default@example.com", 1893456000L), StandardCharsets.UTF_8);
+
+        repository(userHome).activateSlotForDefaultCodexHome(9);
+
+        assertFalse(Files.exists(legacyHome.resolve("auth.json")));
+        assertEquals("9", Files.readString(legacyHome.resolve("active_account_slot.txt"),
+                StandardCharsets.US_ASCII));
+        assertTrue(Files.readString(legacyHome.resolve("config.toml"), StandardCharsets.UTF_8)
                 .contains("gpt-5.5"));
     }
 
